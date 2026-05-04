@@ -1,21 +1,10 @@
 import argparse
 
 from backend.src.config import Settings
-from backend.src.domain.models import AnalysisResult, EmailMessage
-from backend.src.integrations.ai_client import OpenAiCompatibleClient
+from backend.src.integrations.ai_client import MockAiClient, OpenAiCompatibleClient
 from backend.src.integrations.imap_client import GmailImapClient
 from backend.src.services.email_pipeline import EmailPipeline
 from backend.src.storage.database import Database
-
-
-class MockAiClient:
-    def analyze_email(self, email_message: EmailMessage) -> AnalysisResult:
-        return AnalysisResult(
-            risk_score=85,
-            label="spam",
-            reason="Suspicious urgent language and link pattern.",
-            model_name="mock-model",
-        )
 
 
 def main() -> None:

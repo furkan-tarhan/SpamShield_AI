@@ -23,38 +23,42 @@ class GmailImapClient:
         self.username = username
         self.password = password
 
-    def fetch_unread_messages(self, limit: int = 20) -> List[EmailMessage]:
+    # backend/src/integrations/imap_client.py
+
+    def fetch_unread_messages(self, limit: int = 10) -> List[EmailMessage]:
         messages: List[EmailMessage] = []
+        # Bağlantıyı kuruyoruz
         with self._connect() as mail:
             mail.select("INBOX")
+            # 2. Hafta Görevi: Okunmamış (UNSEEN) mailleri arıyoruz
             status, data = mail.search(None, "UNSEEN")
+            
             if status != "OK" or not data or not data[0]:
                 return messages
-
+            
+            # Mail ID'lerini alıyoruz
             mail_ids = data[0].split()
-            for mail_id in mail_ids[:limit]:
+            
+            # Son 'limit' kadar maili ters sırayla (en yeni en başta) alalım
+            for mail_id in reversed(mail_ids[-limit:]):
                 status, raw_message = mail.fetch(mail_id, "(RFC822)")
-                if status != "OK" or not raw_message or len(raw_message) == 0:
+                if status != "OK":
                     continue
-
+                
+                # Burada maili parse (ayrıştırma) edeceğiz
+                # 2. Hafta Görevi: HTML'den düz metne dönüştürme burada başlayacak
                 payload = raw_message[0][1]
                 parsed = email.message_from_bytes(payload)
-                message_id = parsed.get("Message-ID", "").strip()
-                if not message_id:
-                    continue
-
-                sender = self._decode_mime_header(parsed.get("From", "Unknown"))
-                subject = self._decode_mime_header(parsed.get("Subject", "(no subject)"))
-                body = self._extract_text_body(parsed)
-                received_at = self._parse_email_date(parsed.get("Date"))
-
+                
+                # Modellerimize uygun şekilde listeye ekliyoruz
+                # (Furkan'ın hazırladığı yardımcı fonksiyonları kullanmaya devam ediyoruz)
                 messages.append(
                     EmailMessage(
-                        message_id=message_id,
-                        sender=sender,
-                        subject=subject,
-                        body=body,
-                        received_at=received_at,
+                        message_id=parsed.get("Message-ID", "").strip(),
+                        sender=self._decode_mime_header(parsed.get("From", "Unknown")),
+                        subject=self._decode_mime_header(parsed.get("Subject", "(no subject)")),
+                        body=self._extract_text_body(parsed), # İşte HTML temizleme burada yapılıyor!
+                        received_at=self._parse_email_date(parsed.get("Date")),
                     )
                 )
         return messages

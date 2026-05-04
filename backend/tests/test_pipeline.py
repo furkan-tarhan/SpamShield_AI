@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 from backend.src.domain.models import AnalysisResult, EmailMessage
@@ -15,7 +15,7 @@ def test_pipeline_moves_high_risk_email_to_spam():
         sender="spam@example.com",
         subject="Win now",
         body="You won a prize",
-        received_at=datetime.utcnow(),
+        received_at=datetime.now(timezone.utc),
     )
 
     imap_client.fetch_unread_messages.return_value = [test_email]
