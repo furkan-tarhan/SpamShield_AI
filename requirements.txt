@@ -1,3 +1,9 @@
 google-generativeai
 python-dotenv
+requests
 pandas
+scikit-learn
+joblib
+customtkinter
+pillow
+pytest

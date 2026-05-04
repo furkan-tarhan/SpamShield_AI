@@ -13,6 +13,30 @@ class AiClient(Protocol):
         ...
 
 
+class MockAiClient:
+    """API anahtarı yokken veya testlerde kullanılır."""
+
+    def analyze_email(self, email_message: EmailMessage) -> AnalysisResult:
+        body_lower = (email_message.body or "").lower()
+        suspicious = any(
+            w in body_lower
+            for w in ("winner", "urgent", "verify", "click here", "prize", "bitcoin")
+        )
+        if suspicious:
+            return AnalysisResult(
+                risk_score=88,
+                label="spam",
+                reason="Heuristic mock: suspicious keywords.",
+                model_name="mock-model",
+            )
+        return AnalysisResult(
+            risk_score=12,
+            label="safe",
+            reason="Heuristic mock: no strong signals.",
+            model_name="mock-model",
+        )
+
+
 class OpenAiCompatibleClient:
     def __init__(
         self,
@@ -30,8 +54,8 @@ class OpenAiCompatibleClient:
 
     def analyze_email(self, email_message: EmailMessage) -> AnalysisResult:
         prompt = (
-            "You are a spam and phishing detector. "
-            "Analyze this email and return ONLY valid JSON in this format: "
+            "You are an email security analyst. Assess phishing, malware links, credential harvesting, "
+            "spoofed senders, and financial fraud. Return ONLY valid JSON in this format: "
             '{"risk_score": <0-100 int>, "label": "spam|safe", "reason": "<short reason>"}.\n\n'
             f"From: {email_message.sender}\n"
             f"Subject: {email_message.subject}\n"
@@ -50,7 +74,13 @@ class OpenAiCompatibleClient:
                     json={
                         "model": self.model,
                         "messages": [
-                            {"role": "system", "content": "Return JSON only."},
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You classify emails for security. "
+                                    "Respond with a single JSON object only, no markdown."
+                                ),
+                            },
                             {"role": "user", "content": prompt},
                         ],
                         "temperature": 0,
